@@ -1,299 +1,112 @@
+
 import streamlit as st
-import pandas as pd
 import joblib
+import numpy as np
 
-# Load trained model and preprocessor
-model = joblib.load("xgb_model.pkl")
-preprocessor = joblib.load("preprocessor.pkl")
+# Load model
+model = joblib.load("/Users/macair/Movies/fraud_model.pkl")
 
-# Page settings
-st.set_page_config(
-    page_title="Insurance Claim Fraud Detection",
-    page_icon="car"
-)
-
-# Title
 st.title("Insurance Claim Fraud Detection")
-st.write("Vehicle Insurance Claim Fraud Detection using XGBoost")
+st.write("Enter claim details to predict whether the claim is Genuine or Fraudulent.")
 
-st.header("Claim Details")
+# Demo values
+genuine_demo = {
+    "months": 328,
+    "age": 48,
+    "premium": 1406.91,
+    "umbrella": 0,
+    "total": 71610,
+    "injury": 6510,
+    "property": 13020,
+    "vehicle": 52080,
+    "extra": [521585, 1000, 466132, 53300, 0, 5, 1, 1, 2, 2004]
+}
 
-# Month
-month = st.selectbox(
-    "Month",
-    ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-)
+fraud_demo = {
+    "months": 165,
+    "age": 37,
+    "premium": 1137.03,
+    "umbrella": 0,
+    "total": 51590,
+    "injury": 9380,
+    "property": 9380,
+    "vehicle": 32830,
+    "extra": [429027, 1000, 603195, 0, 0, 23, 3, 2, 2, 2015]
+}
 
-# Week of Month
-week_of_month = st.selectbox(
-    "Week of Month",
-    [1, 2, 3, 4, 5]
-)
+# Session state for values
+if "months" not in st.session_state:
+    st.session_state.months = 100
+    st.session_state.age = 30
+    st.session_state.premium = 1000.0
+    st.session_state.umbrella = 0.0
+    st.session_state.total = 50000.0
+    st.session_state.injury = 10000.0
+    st.session_state.property = 10000.0
+    st.session_state.vehicle = 30000.0
+    st.session_state.extra = [0, 1000, 0, 0, 0, 12, 1, 0, 0, 2010]
 
-# Day of Week
-day_of_week = st.selectbox(
-    "Day of Week",
-    ["Monday", "Tuesday", "Wednesday", "Thursday",
-     "Friday", "Saturday", "Sunday"]
-)
+# Demo buttons
+col1, col2 = st.columns(2)
 
-# Vehicle Make
-make = st.selectbox(
-    "Vehicle Make",
-    [
-        "Accura", "BMW", "Chevrolet", "Dodge", "Ferrari",
-        "Ford", "Honda", "Jaguar", "Lexus", "Mazda",
-        "Mecedes", "Mercury", "Nissan", "Pontiac",
-        "Porsche", "Saab", "Saturn", "Toyota", "Volkswagen"
-    ]
-)
+if col1.button("Load Genuine Demo"):
+    for key in ["months", "age", "premium", "umbrella", "total", "injury", "property", "vehicle", "extra"]:
+        st.session_state[key] = genuine_demo[key]
+    st.rerun()
 
-# Accident Area
-accident_area = st.selectbox(
-    "Accident Area",
-    ["Urban", "Rural"]
-)
+if col2.button("Load Fraud Demo"):
+    for key in ["months", "age", "premium", "umbrella", "total", "injury", "property", "vehicle", "extra"]:
+        st.session_state[key] = fraud_demo[key]
+    st.rerun()
 
-# Day of Week Claimed
-day_of_week_claimed = st.selectbox(
-    "Day of Week Claimed",
-    ["Monday", "Tuesday", "Wednesday", "Thursday",
-     "Friday", "Saturday", "Sunday", "0"]
-)
+# 8 user inputs
+st.number_input("Months as Customer", min_value=0, key="months")
 
-# Month Claimed
-month_claimed = st.selectbox(
-    "Month Claimed",
-    ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-     "Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "0"]
-)
+st.number_input("Age", min_value=18, max_value=100, key="age")
 
-# Week of Month Claimed
-week_of_month_claimed = st.selectbox(
-    "Week of Month Claimed",
-    [1, 2, 3, 4, 5]
-)
-# -----------------------------
-# Remaining Claim Details
-# -----------------------------
+st.number_input("Policy Annual Premium", min_value=0.0, key="premium")
 
-# Sex
-sex = st.selectbox(
-    "Sex",
-    ["Male", "Female"]
-)
+st.number_input("Umbrella Limit", min_value=0.0, key="umbrella")
 
-# Marital Status
-marital_status = st.selectbox(
-    "Marital Status",
-    ["Single", "Married", "Widow", "Divorced"]
-)
+st.number_input("Total Claim Amount", min_value=0.0, key="total")
 
-# Age
-age = st.number_input(
-    "Age",
-    min_value=18,
-    max_value=80,
-    value=39
-)
+st.number_input("Injury Claim Amount", min_value=0.0, key="injury")
 
-# Fault
-fault = st.selectbox(
-    "Fault",
-    ["Policy Holder", "Third Party"]
-)
+st.number_input("Property Claim Amount", min_value=0.0, key="property")
 
-# Policy Type
-policy_type = st.selectbox(
-    "Policy Type",
-    [
-        "Sedan - Collision",
-        "Sedan - Liability",
-        "Sedan - All Perils",
-        "Sport - Collision",
-        "Sport - Liability",
-        "Sport - All Perils",
-        "Utility - Collision",
-        "Utility - Liability",
-        "Utility - All Perils"
-    ]
-)
+st.number_input("Vehicle Claim Amount", min_value=0.0, key="vehicle")
 
-# Vehicle Category
-vehicle_category = st.selectbox(
-    "Vehicle Category",
-    ["Sport", "Utility", "Sedan"]
-)
+if st.button("Predict"):
 
-# Vehicle Price
-vehicle_price = st.selectbox(
-    "Vehicle Price",
-    [
-        "less than 20000",
-        "20000 to 29000",
-        "30000 to 39000",
-        "40000 to 59000",
-        "60000 to 69000",
-        "more than 69000"
-    ]
-)
+    extra = st.session_state.extra
 
-# Representative Number
-rep_number = st.number_input(
-    "Representative Number",
-    min_value=1,
-    max_value=16,
-    value=8
-)
+    features = np.array([[
+        st.session_state.months,
+        st.session_state.age,
+        extra[0],
+        extra[1],
+        st.session_state.premium,
+        st.session_state.umbrella,
+        extra[2],
+        extra[3],
+        extra[4],
+        extra[5],
+        extra[6],
+        extra[7],
+        extra[8],
+        st.session_state.total,
+        st.session_state.injury,
+        st.session_state.property,
+        st.session_state.vehicle,
+        extra[9]
+    ]])
 
-# Deductible
-deductible = st.selectbox(
-    "Deductible",
-    [300, 400, 500, 600, 700]
-)
+    prediction = model.predict(features)[0]
+    probability = model.predict_proba(features)[0]
 
-# Driver Rating
-driver_rating = st.selectbox(
-    "Driver Rating",
-    [1, 2, 3, 4]
-)
-
-# Days Policy Accident
-days_policy_accident = st.selectbox(
-    "Days Policy Accident",
-    ["8 to 15", "15 to 30", "30 to 60", "more than 60",
-     "none", "1 to 7"]
-)
-
-# Days Policy Claim
-days_policy_claim = st.selectbox(
-    "Days Policy Claim",
-    ["8 to 15", "15 to 30", "more than 30", "none"]
-)
-
-# Past Number of Claims
-past_number_claims = st.selectbox(
-    "Past Number of Claims",
-    ["none", "1", "2 to 4", "more than 4"]
-)
-
-# Age of Vehicle
-age_vehicle = st.selectbox(
-    "Age of Vehicle",
-    ["new", "2 years", "3 years", "4 years", "5 years",
-     "6 years", "7 years", "more than 7"]
-)
-
-# Age of Policy Holder
-age_policy_holder = st.selectbox(
-    "Age of Policy Holder",
-    ["16 to 17", "18 to 20", "21 to 25", "26 to 30",
-     "31 to 35", "36 to 40", "41 to 50", "51 to 65",
-     "over 65"]
-)
-
-# Police Report Filed
-police_report = st.selectbox(
-    "Police Report Filed",
-    ["Yes", "No"]
-)
-
-# Witness Present
-witness_present = st.selectbox(
-    "Witness Present",
-    ["Yes", "No"]
-)
-
-# Agent Type
-agent_type = st.selectbox(
-    "Agent Type",
-    ["External", "Internal"]
-)
-
-# Number of Supplements
-number_supplements = st.selectbox(
-    "Number of Supplements",
-    ["none", "1", "2 to 5", "more than 5"]
-)
-
-# Address Change Claim
-address_change = st.selectbox(
-    "Address Change Claim",
-    ["no change", "under 6 months", "6 months to 1 year",
-     "1 to 3 years", "4 to 8 years"]
-)
-
-# Number of Cars
-number_cars = st.selectbox(
-    "Number of Cars",
-    ["1 vehicle", "2 vehicles", "3 to 4", "5 to 8", "more than 8"]
-)
-
-# Year
-year = st.selectbox(
-    "Year",
-    [1994, 1995, 1996]
-)
-
-# Base Policy
-base_policy = st.selectbox(
-    "Base Policy",
-    ["Liability", "Collision", "All Perils"]
-)
-# -----------------------------
-# Prediction
-# -----------------------------
-
-if st.button("🔍 Predict Claim"):
-
-    input_data = pd.DataFrame([{
-        "Month": month,
-        "WeekOfMonth": week_of_month,
-        "DayOfWeek": day_of_week,
-        "Make": make,
-        "AccidentArea": accident_area,
-        "DayOfWeekClaimed": day_of_week_claimed,
-        "MonthClaimed": month_claimed,
-        "WeekOfMonthClaimed": week_of_month_claimed,
-        "Sex": sex,
-        "MaritalStatus": marital_status,
-        "Age": age,
-        "Fault": fault,
-        "PolicyType": policy_type,
-        "VehicleCategory": vehicle_category,
-        "VehiclePrice": vehicle_price,
-        "RepNumber": rep_number,
-        "Deductible": deductible,
-        "DriverRating": driver_rating,
-        "Days_Policy_Accident": days_policy_accident,
-        "Days_Policy_Claim": days_policy_claim,
-        "PastNumberOfClaims": past_number_claims,
-        "AgeOfVehicle": age_vehicle,
-        "AgeOfPolicyHolder": age_policy_holder,
-        "PoliceReportFiled": police_report,
-        "WitnessPresent": witness_present,
-        "AgentType": agent_type,
-        "NumberOfSuppliments": number_supplements,
-        "AddressChange_Claim": address_change,
-        "NumberOfCars": number_cars,
-        "Year": year,
-        "BasePolicy": base_policy
-    }])
-
-    # Transform input
-    input_encoded = preprocessor.transform(input_data)
-
-    # Prediction
-    prediction = model.predict(input_encoded)[0]
-
-    # Probability
-    probability = model.predict_proba(input_encoded)[0][1]
-
-    if prediction == 1:
-        st.error("FRAUDULENT CLAIM")
-        st.write(f"Fraud Probability: {probability:.2%}")
+    if prediction == "Y":
+        st.error("⚠️ Prediction: Fraudulent Claim")
+        st.write(f"Fraud Probability: {probability[1] * 100:.2f}%")
     else:
-        st.success("GENUINE CLAIM")
-        st.write(f"Fraud Probability: {probability:.2%}")
-        
+        st.success("✅ Prediction: Genuine Claim")
+        st.write(f"Genuine Probability: {probability[0] * 100:.2f}%")
