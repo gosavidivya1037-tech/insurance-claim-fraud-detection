@@ -3,8 +3,8 @@ import streamlit as st
 import joblib
 import numpy as np
 
-# Load model
-model = joblib.load("/Users/macair/Movies/fraud_model.pkl")
+# Load
+model = joblib.load("fraud_model.pkl")
 
 st.title("Insurance Claim Fraud Detection")
 st.write("Enter claim details to predict whether the claim is Genuine or Fraudulent.")
